@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Name>Sierra Web OPAC</Name>
+  <Author>Carleton University Library</Author>
+  <Version>1.0</Version>
+  <Active>true</Active>
+  <Type>Addon</Type>
+  <Description>This Addon does an ISBN or Title search.  ISBN will be run if one is available.</Description>
+  <Forms>
+    <Form>FormItem</Form>
+  </Forms>
+  <Settings>
+    <Setting name="AutoSearch" value="true" type="boolean">
+      <Description>Determines whether or not the search should be done automatically when the item is opened.</Description>
+    </Setting>
+    <Setting name="CatalogueURL" value="https://catalogue.library.carleton.ca/" type="string">
+      <Description>Determines whether or not the search should be done automatically when the item is opened.</Description>
+    </Setting>
+  </Settings>
+  <Files>
+    <File>SierraWebOPAC.lua</File>
+  </Files>
+</Configuration>
