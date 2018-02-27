@@ -56,11 +56,11 @@ function Search()
 	local url = ""
 
 	if isxn ~= nil and isxn ~= "" then
-		url = "search/?searchtype=i&SORT=D&searcharg=" .. AtlasHelpers.UrlEncode(isxn) .. "&searchscope=9&submit=Submit"
+		url = "search/?searchtype=i&SORT=D&searcharg=" .. urlEncode(isxn) .. "&searchscope=9&submit=Submit"
 	elseif title ~= nil and title ~= "" then
-		url = "search/?searchtype=t&SORT=D&searcharg=" .. AtlasHelpers.UrlEncode(title) .. "&searchscope=9&submit=Submit"
+		url = "search/?searchtype=t&SORT=D&searcharg=" .. urlEncode(title) .. "&searchscope=9&submit=Submit"
 	elseif callNumber ~= nil and callNumber ~= "" then
-		url = "search/?searchtype=c&SORT=D&searcharg=" .. AtlasHelpers.UrlEncode(callNumber) .. "&searchscope=9&submit=Submit"
+		url = "search/?searchtype=c&SORT=D&searcharg=" .. urlEncode(callNumber) .. "&searchscope=9&submit=Submit"
 	end
 
 	browser:Navigate(catalogueURL .. url)
@@ -155,3 +155,10 @@ function removeSubFieldMarkers(s)
   return (s:gsub("|[a-zA-Z0-9]", " "))
 end
 
+function urlEncode(str)
+	str = string.gsub (str, "\n", "\r\n");
+	str = string.gsub (str, "([^%w ])",
+			function (c) return string.format ("%%%02X", string.byte(c)) end);
+	str = string.gsub (str, " ", "+");
+	return str;
+end
