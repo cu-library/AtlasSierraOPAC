@@ -1,22 +1,17 @@
 -- About SierraWebOPAC.lua
 --
 -- This Addon does an ISBN or Title search using the Sierra Web OPAC for Carleton University Library.
--- ISBN will be run if one is available.
 -- scriptActive must be set to true for the script to run.
 -- autoSearch (boolean) determines whether the search is performed automatically when a request is opened or not.
 -- catalogueURL (string) determines the URL for the Sierra Web OPAC to use. 
 
 -- set autoSearch to true for this script to automatically run the search when the request is opened.
-
---interfaceMngr:ShowMessage("debug", "debug title")
 local autoSearch = GetSetting("AutoSearch")
 local catalogueURL = GetSetting("CatalogueURL")
 local interfaceMngr = nil
 local form = nil
 local ribbonPage = nil
 local browser = nil
-
-require "Atlas.AtlasHelpers"
 
 function Init()
 	if GetFieldValue("Item", "ItemType") == "MON" then
@@ -88,6 +83,7 @@ function ImportData()
 	local combinedTitle = ""
 	local processingTitle = false
 	local foundISXN = false
+	local foundEditor = false
 
 	for s in marc:gmatch("[^\r\n]+") do
 
@@ -102,12 +98,14 @@ function ImportData()
 
 		local continuedTitle = s:match("^       (.+)$")
 		if (continuedTitle ~= nil and processingTitle == true) then 
-			combinedTitle = combinedTitle .. continuedTitle
+			combinedTitle = trim(combinedTitle) .. " " .. trim(continuedTitle)
 		end
 
 		local hasField = s:find("^%d%d%d .*$")
 		if (hasField ~= nil and processingTitle == true and firstLine == false) then
-			SetFieldValue("Item", "Title", trim(removeSubFieldMarkers(combinedTitle)))
+			local finalTitle = combinedTitle:match("^(.-) ?/ ?.*$")
+			finalTitle = finalTitle .. "."
+			SetFieldValue("Item", "Title", trim(removeSubFieldMarkers(finalTitle)))
 			processingTitle = false
 		end
 
@@ -137,10 +135,26 @@ function ImportData()
 		end
 
 		-- Pages
-		local pages = s:match("300    (.-):?|b.*$")
+		local pages = s:match("^300    .-([0-9]-)]? p\..*$")
 		if pages ~= nil then
-			pages = pages:gsub("p.", " ")
-			SetFieldValue("Item", "Pages", trim(pages))
+			SetFieldValue("Item", "PagesEntireWork", trim(pages))
+		end
+
+		-- Year
+		local year260 = s:match("^260 .. .-|c([0-9][0-9][0-9][0-9])\. $")
+		if year260 ~= nil then
+			SetFieldValue("Item", "JournalYear", trim(year260))
+		end
+		local year264 = s:match("^264 .. .-|c([0-9][0-9][0-9][0-9])\. $")
+		if year264 ~= nil then
+			SetFieldValue("Item", "JournalYear", trim(year264))
+		end
+
+		-- Editor
+		local editor = s:match("^700 10 (.+)$")
+		if (editor ~= nil and foundEditor == false) then
+			SetFieldValue("Item", "Editor", trim(removeSubFieldMarkers(editor)))
+			foundEditor = true
 		end
 	end
 
