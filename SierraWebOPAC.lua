@@ -86,46 +86,61 @@ function ImportData()
 	marc = marc.InnerText
 
 	local combinedTitle = ""
+	local processingTitle = false
+	local foundISXN = false
 
 	for s in marc:gmatch("[^\r\n]+") do
 
 		-- Title
-		local title = s:match("245 10 ([^\n]+)")
-		if title ~= nil then 
-			title = title:gsub("|b", " ")
-			title = title:gsub("|c", " ")
+		local firstLine = false
+		local title = s:match("^245 .. (.+)$")
+		if (title ~= nil and processingTitle == false) then
 			combinedTitle = title
+			processingTitle = true
+			firstLine = true
 		end
 
-		local continuedTitle = s:match("       ([^\n]+)")
-		if continuedTitle ~= nil then 
-			continuedTitle = continuedTitle:gsub("|b", " ")
-			continuedTitle = continuedTitle:gsub("|c", " ")
+		local continuedTitle = s:match("^       (.+)$")
+		if (continuedTitle ~= nil and processingTitle == true) then 
 			combinedTitle = combinedTitle .. continuedTitle
 		end
 
-		local hasField = s:find("^%d%d%d")
-		if hasField ~= nil then
-			SetFieldValue("Item", "Title", trim(combinedTitle))
+		local hasField = s:find("^%d%d%d .*$")
+		if (hasField ~= nil and processingTitle == true and firstLine == false) then
+			SetFieldValue("Item", "Title", trim(removeSubFieldMarkers(combinedTitle)))
+			processingTitle = false
 		end
 
 		-- Author
-		local author = s:match("100 1  ([^\n]+)")
+		local author = s:match("^100 1  (.-)$")
 		if author ~= nil then 
-			SetFieldValue("Item", "Author", trim(author))
+			SetFieldValue("Item", "Author", trim(removeSubFieldMarkers(author)))
 		end
 
 		-- Call Number
-		local callNumber = s:match("090 1  ([^\n]+)")
+		local callNumber = s:match("^090 1  (.+)$")
 		if callNumber ~= nil then 
-			callNumber = callNumber:gsub("|b", " ")
-			SetFieldValue("Item", "Callnumber", callNumber)
+			SetFieldValue("Item", "Callnumber", trim(removeSubFieldMarkers(callNumber)))
 		end
 
 		-- ISXN
-		local isxn = s:match("020    ([^ \n]+)")
-		if isxn ~= nil then 
-			SetFieldValue("Item", "ISXN", isxn)
+		local isxn = s:match("^020    ([a-zA-Z0-9]+) .*$")
+		if (isxn ~= nil and foundISXN == false) then 
+			SetFieldValue("Item", "ISXN", trim(removeSubFieldMarkers(isxn)))
+			foundISXN = true
+		end
+
+		-- Edition
+		local edition = s:match("^250    (.+)$")
+		if edition ~= nil then
+			SetFieldValue("Item", "Edition", trim(removeSubFieldMarkers(edition)))
+		end
+
+		-- Pages
+		local pages = s:match("300    (.-):?|b.*$")
+		if pages ~= nil then
+			pages = pages:gsub("p.", " ")
+			SetFieldValue("Item", "Pages", trim(pages))
 		end
 	end
 
@@ -135,3 +150,8 @@ end
 function trim(s)
   return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
+
+function removeSubFieldMarkers(s)
+  return (s:gsub("|[a-zA-Z0-9]", " "))
+end
+
