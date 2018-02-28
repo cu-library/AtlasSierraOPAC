@@ -52,10 +52,10 @@ function Search()
 
 	if isxn ~= nil and isxn ~= "" then
 		url = "search/?searchtype=i&SORT=D&searcharg=" .. urlEncode(isxn) .. "&searchscope=9&submit=Submit"
-	elseif title ~= nil and title ~= "" then
-		url = "search/?searchtype=t&SORT=D&searcharg=" .. urlEncode(title) .. "&searchscope=9&submit=Submit"
 	elseif callNumber ~= nil and callNumber ~= "" then
 		url = "search/?searchtype=c&SORT=D&searcharg=" .. urlEncode(callNumber) .. "&searchscope=9&submit=Submit"
+	elseif title ~= nil and title ~= "" then
+		url = "search/?searchtype=t&SORT=D&searcharg=" .. urlEncode(title) .. "&searchscope=9&submit=Submit"
 	end
 
 	browser:Navigate(catalogueURL .. url)
