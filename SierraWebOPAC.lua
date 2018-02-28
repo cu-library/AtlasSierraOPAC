@@ -83,85 +83,111 @@ function ImportData()
 	-- The marc table holds the marc text from the web page, broken down by tag and subtag.
 	local marc = {}
 	local lastTag = ""
-	local lastSubtag = ""
 
 	-- Process the raw MARC line by line.
 	for line in unprocessedMarc:gmatch("[^\r\n]+") do
-		local tag, subtag, value = line:match("^(...).(..).(.*)$")
+		local tag, value = line:match("^(...)....(.*)$")
 		tag = trim(tag)
-		subtag = trim(subtag)
 		value = trim(value)
 		-- If the tag is LEA, we're on the first line. Skip to the next line.
 		if tag == "LEA" then
 		-- If the tag is empty, we're still processing a multi-line value. Add it to the previous tag.
 		elseif tag == "" then
-			lastAddedIndex = #marc[lastTag][lastSubtag]
-			marc[lastTag][lastSubtag][lastAddedIndex] = marc[lastTag][lastSubtag][lastAddedIndex] .. " " .. value
+			lastAddedIndex = #marc[lastTag]
+			marc[lastTag][lastAddedIndex] = marc[lastTag][lastAddedIndex] .. " " .. value
 		else
 			if marc[tag] == nil then marc[tag] = {} end
-			if marc[tag][subtag] == nil then marc[tag][subtag] = {} end
-			table.insert(marc[tag][subtag], value)
+			table.insert(marc[tag], value)
 			lastTag = tag
-			lastSubtag = subtag
 		end
 	end
 
 	-- Title
 	if marc["245"] ~= nil then
-		local title = ""
-		if     marc["245"]["00"] ~= nil then title = marc["245"]["00"][1]
-		elseif marc["245"]["10"] ~= nil then title = marc["245"]["10"][1]
-		elseif marc["245"]["13"] ~= nil then title = marc["245"]["13"][1]
-		elseif marc["245"]["14"] ~= nil then title = marc["245"]["14"][1] end
-		if title ~= "" then
-			local finalTitle = title:match("^(.-) ?/ ?.*$")
-			if finalTitle == nil then
-				finalTitle = title
-			else
-				finalTitle = finalTitle .. "."
-			end
-			SetFieldValue("Item", "Title", removeSubFieldMarkers(finalTitle))
+		-- Strip out anything past the /
+		local finalTitle = marc["245"][1]:match("^(.-) ?/ ?.*$")
+		-- If the match failed, we have a title with no /. 
+		if finalTitle == nil then
+			finalTitle = marc["245"][1]
+		else
+			-- The match succeeded, add back the . at the end of the title.
+			finalTitle = finalTitle .. "."
 		end
+		SetFieldValue("Item", "Title", removeSubFieldMarkers(finalTitle))
 	end
 
 	-- Author
-	if (marc["100"] ~= nil and marc["100"]["1"] ~= nil) then
-		SetFieldValue("Item", "Author", removeSubFieldMarkers(marc["100"]["1"][1]))
+	-- Use the 100, 110, or 111 fields. 
+	if marc["100"] ~= nil then
+		SetFieldValue("Item", "Author", removeSubFieldMarkers(marc["100"][1]))
+	elseif marc["110 "] ~= nil then
+		SetFieldValue("Item", "Author", removeSubFieldMarkers(marc["110"][1]))
+	elseif marc["111 "] ~= nil then
+		SetFieldValue("Item", "Author", removeSubFieldMarkers(marc["111"][1]))
 	end
 
 	-- Call Number
-	if (marc["090"] ~= nil and marc["090"]["1"] ~= nil) then
-		SetFieldValue("Item", "Callnumber", removeSubFieldMarkers(marc["090"]["1"][1]))
+	if marc["090"] ~= nil then
+		SetFieldValue("Item", "Callnumber", removeSubFieldMarkers(marc["090"][1]))
 	end
 
 	-- ISXN
-	if (marc["020"] ~= nil and marc["020"][""] ~= nil) then
-		isxn = marc["020"][""][1]:match("^([a-zA-Z0-9]+).*$")
+	if marc["020"] ~= nil then
+		local startWithSubField = marc["020"]:find("^|[a-z].*")
+		if startWithSubField == nil then
+			local isxn = marc["020"][1]:match("^([a-zA-Z0-9]+).*$")
+		else
+			local isxn = marc["020"][1]:match("^|[a-z]([a-zA-Z0-9]+).*$")
+		end
 		SetFieldValue("Item", "ISXN", removeSubFieldMarkers(isxn))
 	end
 
 	-- Edition
-	if (marc["250"] ~= nil and marc["250"][""] ~= nil) then
-		SetFieldValue("Item", "Edition", removeSubFieldMarkers(marc["250"][""][1]))
+	if marc["250"] ~= nil then
+		SetFieldValue("Item", "Edition", removeSubFieldMarkers(marc["250"][1]))
 	end
 
 	-- Pages
-	if (marc["300"] ~= nil and marc["300"][""] ~= nil) then
-		pages = marc["300"][""][1]:match("^.-([0-9]-)%]? ?p\..*$")
-		SetFieldValue("Item", "PagesEntireWork", pages)
+	if marc["300"] ~= nil then
+		-- If there are volumes, don't guess the number of pages
+		if (marc["300"][1]:find("v%.") == nil or marc["300"][1]:find("volume") == nil) then
+			pages = marc["300"][1]:match("^.-([0-9]-)%]? ?p\..*$")
+			if pages == nil then
+				pages = marc["300"][1]:match("^.-([0-9]-)%]? ?pages.*$")
+			end
+			if pages ~= nil then
+				SetFieldValue("Item", "PagesEntireWork", pages)
+			end
+		end
 	end
 
 	-- Year
-	if (marc["260"] ~= nil and marc["260"][""] ~= nil) then
-		SetFieldValue("Item", "JournalYear", getYear(marc["260"][""][1]))
-	end
-	if (marc["264"] ~= nil and marc["264"][""] ~= nil) then
-		SetFieldValue("Item", "JournalYear", getYear(marc["264"][""][1]))
+	if marc["008"] ~= nil  then
+		SetFieldValue("Item", "JournalYear", marc["008"][1]:sub(8, 11))
 	end
 
 	-- Editor
-	if (marc["700"] ~= nil and marc["700"]["10"] ~= nil) then
-		SetFieldValue("Item", "Editor", removeSubFieldMarkers(marc["700"]["10"][1]))
+	if marc["245"] ~= nil then
+		local editor = marc["245"][1]:match("^.-|c.-[eE]dited by ([^,]*) and .*$")
+		if editor == nil then
+			editor = marc["245"][1]:match("^.-|c.-[eE]dited by ([^,]*).*%.$")
+		end
+		if editor == nil then
+			editor = marc["245"][1]:match("^.-|c.-[eE]dited and introduced by ([^,]*).*%.$")
+		end
+		if editor == nil then
+			editor = marc["245"][1]:match("^.-|c.-[eE]dited and with an introduction by ([^,]*).*%.$")
+		end
+		if editor == nil then
+			editor = marc["245"][1]:match("^.-|c.-[eE]dited and with introductions by ([^,]*).*%.$")
+		end
+		if editor == nil then
+			editor = marc["245"][1]:match("^.-|c.-[eE]dited with introductions by ([^,]*).*%.$")
+		end
+		if editor == nil then
+			editor = marc["245"][1]:match("^.-|c.-[eE]dited and transcribed by ([^,]*).*%.$")
+		end
+		SetFieldValue("Item", "Editor", editor)
 	end
 
 	ExecuteCommand("SwitchTab", {"Details"})
@@ -184,11 +210,4 @@ function urlEncode(str)
 	str = str:gsub("([^%w ])",
 			function (c) return string.format ("%%%02X", string.byte(c)) end)
 	return (str:gsub(" ", "+"))
-end
-
--- Get the year from a 260 or 264 field. 
-function getYear(value)
-	year = value:match("^.-|cc?%[?([0-9][0-9][0-9][0-9])%]?%.?$")
-	if year == nil then year = value:match("^.-%[?([0-9][0-9][0-9][0-9])%]?$") end
-	return year
 end
