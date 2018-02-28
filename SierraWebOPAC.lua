@@ -146,7 +146,7 @@ function ImportData()
 
 	-- Pages
 	if (marc["300"] ~= nil and marc["300"][""] ~= nil) then
-		pages = marc["300"][""][1]:match("^.-([0-9]-)]? p\..*$")
+		pages = marc["300"][""][1]:match("^.-([0-9]-)%]? ?p\..*$")
 		SetFieldValue("Item", "PagesEntireWork", pages)
 	end
 
