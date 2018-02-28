@@ -111,7 +111,8 @@ function ImportData()
 		local title = ""
 		if     marc["245"]["00"] ~= nil then title = marc["245"]["00"][1]
 		elseif marc["245"]["10"] ~= nil then title = marc["245"]["10"][1]
-		elseif marc["245"]["13"] ~= nil then title = marc["245"]["13"][1] end
+		elseif marc["245"]["13"] ~= nil then title = marc["245"]["13"][1]
+		elseif marc["245"]["14"] ~= nil then title = marc["245"]["14"][1] end
 		if title ~= "" then
 			local finalTitle = title:match("^(.-) ?/ ?.*$")
 			if finalTitle == nil then
