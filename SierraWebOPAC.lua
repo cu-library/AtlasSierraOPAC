@@ -187,7 +187,7 @@ end
 
 -- Get the year from a 260 or 264 field. 
 function getYear(value)
-	year = value:match("^.-|c%[?([0-9][0-9][0-9][0-9])%]?%.?$")
+	year = value:match("^.-|cc?%[?([0-9][0-9][0-9][0-9])%]?%.?$")
 	if year == nil then year = value:match("^.-%[?([0-9][0-9][0-9][0-9])%]?$") end
 	return year
 end
