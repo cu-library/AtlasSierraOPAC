@@ -1,11 +1,11 @@
 -- About SierraWebOPAC.lua
 --
--- This Addon does an ISBN or Title search using the Sierra Web OPAC for Carleton University Library.
+-- This addon allows for importing data from the Sierra Web OPAC to the item form. 
+-- The MARC display for an item must be open before importing will work.
 -- scriptActive must be set to true for the script to run.
 -- autoSearch (boolean) determines whether the search is performed automatically when a request is opened or not.
 -- catalogueURL (string) determines the URL for the Sierra Web OPAC to use. 
 
--- set autoSearch to true for this script to automatically run the search when the request is opened.
 local autoSearch = GetSetting("AutoSearch")
 local catalogueURL = GetSetting("CatalogueURL")
 local interfaceMngr = nil
@@ -80,16 +80,20 @@ function ImportData()
 
 	unprocessedMarc = unprocessedMarc.InnerText
 
+	-- The marc table holds the marc text from the web page, broken down by tag and subtag.
 	local marc = {}
 	local lastTag = ""
 	local lastSubtag = ""
 
+	-- Process the raw MARC line by line.
 	for line in unprocessedMarc:gmatch("[^\r\n]+") do
 		local tag, subtag, value = line:match("^(...).(..).(.*)$")
 		tag = trim(tag)
 		subtag = trim(subtag)
 		value = trim(value)
+		-- If the tag is LEA, we're on the first line. Skip to the next line.
 		if tag == "LEA" then
+		-- If the tag is empty, we're still processing a multi-line value. Add it to the previous tag.
 		elseif tag == "" then
 			lastAddedIndex = #marc[lastTag][lastSubtag]
 			marc[lastTag][lastSubtag][lastAddedIndex] = marc[lastTag][lastSubtag][lastAddedIndex] .. " " .. value
@@ -162,15 +166,18 @@ function ImportData()
 	ExecuteCommand("SwitchTab", {"Details"})
 end
 
+-- Remove whitespace from the beginning and ending of a string.
 function trim(s)
 	return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
 
+-- Remove any subfield markers. If that leaves double spaces, remove those as well.
 function removeSubFieldMarkers(s)
 	local subsDone = s:gsub("|[a-zA-Z0-9]", " ")
 	return (subsDone:gsub("  ", " "))
 end
 
+-- URL Encode values for the catalogue search. 
 function urlEncode(str)
 	str = str:gsub("\n", "\r\n")
 	str = str:gsub("([^%w ])",
@@ -178,6 +185,7 @@ function urlEncode(str)
 	return (str:gsub(" ", "+"))
 end
 
+-- Get the year from a 260 or 264 field. 
 function getYear(value)
 	year = value:match("^.-|c%[?([0-9][0-9][0-9][0-9])%]?%.?$")
 	if year == nil then year = value:match("^.-%[?([0-9][0-9][0-9][0-9])%]?$") end
