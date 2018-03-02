@@ -13,6 +13,22 @@ local form = nil
 local ribbonPage = nil
 local browser = nil
 
+local marcr = require "marcr"
+
+-- URL Encode values for the catalogue search. 
+local function urlEncode(str)
+	str = str:gsub("\n", "\r\n")
+	str = str:gsub("([^%w ])",
+			function (c) return string.format ("%%%02X", string.byte(c)) end)
+	return (str:gsub(" ", "+"))
+end
+
+local function useIfNotEmpty(fieldName, value)
+	if value ~= "" then
+		SetFieldValue("Item", fieldName, value)
+	end
+end
+
 function Init()
 	if GetFieldValue("Item", "ItemType") == "MON" then
 		interfaceMngr = GetInterfaceManager()
@@ -79,135 +95,15 @@ function ImportData()
 	end
 
 	unprocessedMarc = unprocessedMarc.InnerText
-
-	-- The marc table holds the marc text from the web page, broken down by tag and subtag.
-	local marc = {}
-	local lastTag = ""
-
-	-- Process the raw MARC line by line.
-	for line in unprocessedMarc:gmatch("[^\r\n]+") do
-		local tag, value = line:match("^(...)....(.*)$")
-		tag = trim(tag)
-		value = trim(value)
-		-- If the tag is LEA, we're on the first line. Skip to the next line.
-		if tag == "LEA" then
-		-- If the tag is empty, we're still processing a multi-line value. Add it to the previous tag.
-		elseif tag == "" then
-			lastAddedIndex = #marc[lastTag]
-			marc[lastTag][lastAddedIndex] = marc[lastTag][lastAddedIndex] .. " " .. value
-		else
-			if marc[tag] == nil then marc[tag] = {} end
-			table.insert(marc[tag], value)
-			lastTag = tag
-		end
-	end
-
-	-- Title
-	if marc["245"] ~= nil then
-		-- Strip out anything past the /
-		local finalTitle = marc["245"][1]:match("^(.-) ?/ ?.*$")
-		-- If the match failed, we have a title with no /. 
-		if finalTitle == nil then
-			finalTitle = marc["245"][1]
-		else
-			-- The match succeeded, add back the . at the end of the title.
-			finalTitle = finalTitle .. "."
-		end
-		SetFieldValue("Item", "Title", removeSubFieldMarkers(finalTitle))
-	end
-
-	-- Author
-	-- Use the 100, 110, or 111 fields. 
-	if marc["100"] ~= nil then
-		SetFieldValue("Item", "Author", removeSubFieldMarkers(marc["100"][1]))
-	elseif marc["110 "] ~= nil then
-		SetFieldValue("Item", "Author", removeSubFieldMarkers(marc["110"][1]))
-	elseif marc["111 "] ~= nil then
-		SetFieldValue("Item", "Author", removeSubFieldMarkers(marc["111"][1]))
-	end
-
-	-- Call Number
-	if marc["090"] ~= nil then
-		SetFieldValue("Item", "Callnumber", removeSubFieldMarkers(marc["090"][1]))
-	end
-
-	-- ISXN
-	if marc["020"] ~= nil then
-		local startWithSubField = marc["020"]:find("^|[a-z].*")
-		if startWithSubField == nil then
-			local isxn = marc["020"][1]:match("^([a-zA-Z0-9]+).*$")
-		else
-			local isxn = marc["020"][1]:match("^|[a-z]([a-zA-Z0-9]+).*$")
-		end
-		SetFieldValue("Item", "ISXN", removeSubFieldMarkers(isxn))
-	end
-
-	-- Edition
-	if marc["250"] ~= nil then
-		SetFieldValue("Item", "Edition", removeSubFieldMarkers(marc["250"][1]))
-	end
-
-	-- Pages
-	if marc["300"] ~= nil then
-		-- If there are volumes, don't guess the number of pages
-		if (marc["300"][1]:find("v%.") == nil or marc["300"][1]:find("volume") == nil) then
-			pages = marc["300"][1]:match("^.-([0-9]-)%]? ?p\..*$")
-			if pages == nil then
-				pages = marc["300"][1]:match("^.-([0-9]-)%]? ?pages.*$")
-			end
-			if pages ~= nil then
-				SetFieldValue("Item", "PagesEntireWork", pages)
-			end
-		end
-	end
-
-	-- Year
-	if marc["008"] ~= nil  then
-		SetFieldValue("Item", "JournalYear", marc["008"][1]:sub(8, 11))
-	end
-
-	-- Editor
-	if marc["245"] ~= nil then
-		local editor = marc["245"][1]:match("^.-|c.-[eE]dited by ([^,]*) and .*$")
-		if editor == nil then
-			editor = marc["245"][1]:match("^.-|c.-[eE]dited by ([^,]*).*%.$")
-		end
-		if editor == nil then
-			editor = marc["245"][1]:match("^.-|c.-[eE]dited and introduced by ([^,]*).*%.$")
-		end
-		if editor == nil then
-			editor = marc["245"][1]:match("^.-|c.-[eE]dited and with an introduction by ([^,]*).*%.$")
-		end
-		if editor == nil then
-			editor = marc["245"][1]:match("^.-|c.-[eE]dited and with introductions by ([^,]*).*%.$")
-		end
-		if editor == nil then
-			editor = marc["245"][1]:match("^.-|c.-[eE]dited with introductions by ([^,]*).*%.$")
-		end
-		if editor == nil then
-			editor = marc["245"][1]:match("^.-|c.-[eE]dited and transcribed by ([^,]*).*%.$")
-		end
-		SetFieldValue("Item", "Editor", editor)
-	end
+	marcr.process(unprocessedMarc)
+	useIfNotEmpty("Title", marcr.title())
+	useIfNotEmpty("Author", marcr.author())
+	useIfNotEmpty("Callnumber", marcr.callnumber())
+	useIfNotEmpty("ISXN", marcr.isxn())
+	useIfNotEmpty("Edition", marcr.edition())
+	useIfNotEmpty("PagesEntireWork", marcr.pages())
+	useIfNotEmpty("JournalYear", marcr.year())
+	useIfNotEmpty("Editor", marcr.editor())
 
 	ExecuteCommand("SwitchTab", {"Details"})
-end
-
--- Remove whitespace from the beginning and ending of a string.
-function trim(s)
-	return (s:gsub("^%s*(.-)%s*$", "%1"))
-end
-
--- Remove any subfield markers. If that leaves double spaces, remove those as well.
-function removeSubFieldMarkers(s)
-	local subsDone = s:gsub("|[a-zA-Z0-9]", " ")
-	return (subsDone:gsub("  ", " "))
-end
-
--- URL Encode values for the catalogue search. 
-function urlEncode(str)
-	str = str:gsub("\n", "\r\n")
-	str = str:gsub("([^%w ])",
-			function (c) return string.format ("%%%02X", string.byte(c)) end)
-	return (str:gsub(" ", "+"))
 end
