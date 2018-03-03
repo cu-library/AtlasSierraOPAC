@@ -47,7 +47,7 @@ function marcr.title()
 	local title = ""
 	if marcr["m"]["245"] ~= nil then
 		-- Strip out anything past the /
-		title = marcr["m"]["245"][1]:match("^(.-) ?/ ?.*$")
+		title = marcr["m"]["245"][1]:match("^(.-) ?/ ?%|c.*$")
 		-- If the match failed, we have a title with no /. 
 		if title == nil then
 			title = marcr["m"]["245"][1]
@@ -69,14 +69,16 @@ function marcr.author()
 	-- Use the 100, 110, or 111 fields. 
 	if marcr["m"]["100"] ~= nil then
 		author = marcr["m"]["100"][1]
+	elseif marcr["m"]["110"] ~= nil then
+		author = marcr["m"]["110"][1]
+	elseif marcr["m"]["111 "] ~= nil then
+		author = marcr["m"]["111"][1]
+	end
+	if author ~= "" then
 		author = author:gsub(",?%|e.*$", ".")
 		author = author:gsub("%)%.$", ")")
 		author = author:gsub("%-%.$", "-")
 		author = author:gsub("%.%.$", ".")
-	elseif marcr["m"]["110 "] ~= nil then
-		author = marcr["m"]["110"][1]
-	elseif marcr["m"]["111 "] ~= nil then
-		author = marcr["m"]["111"][1]
 	end
 
 	-- We couldn't find an author in the 100 field. Fall back to title. 
@@ -156,12 +158,13 @@ function marcr.edition()
 		if edition == nil then
 			edition = marcr["m"]["250"][1]
 		end
-		edition = edition:gsub("^%[", "")
-		edition = edition:gsub("^%[", "")
-		edition = edition:gsub("%]$", "")
+		edition = edition:gsub("%[", "")
+		edition = edition:gsub("%]", "")
+		edition = edition:gsub("%.%.$", ".")
 		edition = edition:gsub(" %-$", "")
 		edition = edition:gsub("edition$", "edition.")
 		edition = edition:gsub("ed$", "ed.")
+		edition = edition:gsub("&amp;", "&")
 	end
 	return removeSubFieldMarkers(edition)
 end
@@ -173,15 +176,21 @@ function marcr.pages()
 		if (marcr["m"]["300"][1]:find("v%.") == nil and marcr["m"]["300"][1]:find("volume") == nil) then
 
 			-- If the pages contain an "added pages" section...
-			if marcr["m"]["300"][1]:find("^.-%[%d-%] p%.") ~= nil then
-				pages = marcr["m"]["300"][1]:match("^.-([0-9]-) ?p?%.?, %[.*$")
+			if marcr["m"]["300"][1]:find("^.-%[%d-%] p") ~= nil then				
+				pages = marcr["m"]["300"][1]:match("^.-(%d-) ?pages, %[.*$")
+				if pages == nil then
+					pages = marcr["m"]["300"][1]:match("^.-(%d-) ?p?%.?, %[.*$")
+				end
+				if pages == nil then
+					pages = marcr["m"]["300"][1]:match("^.-(%d-), %[.*$")
+				end	
 			else 
-				pages = marcr["m"]["300"][1]:match("^.-([0-9]-)%]? ?p%.?.*$")
+				pages = marcr["m"]["300"][1]:match("^.-([%d]-) ?p%.?.*$")
+				if pages == nil then
+					pages = marcr["m"]["300"][1]:match("^.-([%d]-) ?pages.*$")
+				end
 			end
-
-			if pages == nil then
-				pages = marcr["m"]["300"][1]:match("^.-([0-9]-)%]? ?pages.*$")
-			end
+			
 			if pages == nil then
 				pages = marcr["m"]["300"][1]
 			end
