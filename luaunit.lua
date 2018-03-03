@@ -703,11 +703,15 @@ function M.editionAssertEquals(actual, expected)
             expected = expected:gsub("ed%.", "edition.")
         end
 
-        if (actual == "Sixth edition." and expected:find("^6th edition%.?$") ~= nil) then
-        elseif (actual == "Firth edition." and expected:find("^5th edition%.?$") ~= nil) then
+        if (actual == "Ninth edition." and expected:find("^9th edition%.?$") ~= nil) then
+        elseif (actual == "Eighth edition." and expected:find("^8th edition%.?$") ~= nil) then
+        elseif (actual == "Seventh edition." and expected:find("^7th edition%.?$") ~= nil) then
+        elseif (actual == "Sixth edition." and expected:find("^6th edition%.?$") ~= nil) then
+        elseif (actual == "Fifth edition." and expected:find("^5th edition%.?$") ~= nil) then
         elseif (actual == "Fourth edition." and expected:find("^4th edition%.?$") ~= nil) then
         elseif (actual == "Third edition." and expected:find("^3rd edition%.?$") ~= nil) then
         elseif (actual == "Second edition." and expected:find("^2nd edition%.?$") ~= nil) then
+        elseif (actual == "First edition." and expected:find("^1st edition%.?$") ~= nil) then
         elseif (expected:find("1st ?e?d?.?") ~= nil and actual == "") then
         elseif (expected == "First ed." and actual == "") then
         elseif (expected == "First ed." and actual == "1st ed.") then

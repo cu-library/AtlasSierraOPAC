@@ -1,33 +1,54 @@
 local marcr = require "marcr"
 local luaunit = require "luaunit"
 
-function test013805326X()
-       marcr.process([[LEADER 00000pam  2200000 a 4500 
-001    54206350 
-003    CaOEAGC 
-005    19990519114500.6 
-008    991201s1999    njua     b    001 0 eng   
-010    98050525 
-020    013805326X (pbk.) 
-035    1189957 
-040    DLC|cDLC|dDLC 
-050 00 QC680|b.G74 1999 
-090 1  QC680.G74 1999 
-100 1  Griffiths, David J.|q(David Jeffrey),|d1942- 
-245 10 Introduction to electrodynamics /|cDavid J. Griffiths. 
-250    3rd ed. 
-260    Upper Saddle River, N.J. :|bPrentice Hall,|cc1999. 
-300    xv, 576 p. :|bill. ;|c25 cm. 
-504    Includes bibliographical references and index. 
-650  0 Electrodynamics. 
+function test9781552391624()
+    marcr.process([[LEADER 00000nam  22003374a 4500 
+008    050929s2006    onca   | bv   000 0 eng|  
+016    20059060379 
+020    1552391620  
+020    9781552391624 
+035    (OCoLC)61864469 
+040    NLC|beng|cNLC|dGUL|dYDXCP|dOCLCQ|dGWL|dCaOOCC|zKL 
+043    n-cn--- 
+049    BOPM 
+050  4 KZ358.A2|bI58 2006 
+090 1  KZ358.A2|bI58 2006 
+245 00 International law :|bchiefly as interpreted and applied in
+       Canada /|cHugh M. Kindred and Phillip M. Saunders, general
+       editors ; Jutta Brunnée ... [et al.]. 
+250    7th ed. 
+260    Toronto :|bEmond Montgomery Publications,|c2006. 
+300    lxxxi, 1221 p. :|bill. ;|c24 cm. +|e1 supplement (v, 156 
+       p.). 
+500    Edition comprises one volume + documentary supplement. 
+504    Includes bibliographical references. 
+505 0  The roles of international law and international lawyers -
+       -International legal persons -- Creation and ascertainment
+       of international law -- National application of 
+       international law -- Interstate relations --  
+       International dispute settlement -- State jurisdiction 
+       over territory -- Nationality -- State jurisdiction over 
+       persons -- State responsibility -- International criminal 
+       law -- Protection of human rights -- Law of the sea -- 
+       Protection of the environment -- Limitation of the use of 
+       force. 
+650  0 International law|zCanada. 
+650  0 International law|zCanada|vCases. 
+650  0 International law|vSources. 
+650  0 International law|vCases. 
+650  0 Government liability (International law) 
+650  0 Environmental law, International. 
+700 1  Kindred, Hugh M. 
+700 1  Saunders, Phillip Martin. 
+700 1  Brunnée, Jutta. 
 ]])
-       luaunit.assertEquals(string.lower(marcr.title()), string.lower("Introduction to electrodynamics."))
-       luaunit.authorAssertEquals(marcr.author(), " Griffiths, David J. (David Jeffrey), 1942-")
-       luaunit.callnumberAssertEquals(marcr.callnumber(), "QC680.G74 1999")
-       luaunit.editionAssertEquals(marcr.edition(), "3rd ed.")
-       luaunit.assertEquals(marcr.pages(), "576")
-       luaunit.assertEquals(marcr.year(), "1999")
-       luaunit.assertEquals(marcr.editor(), "")
+    luaunit.assertEquals(string.lower(marcr.title()), string.lower("International law : chiefly as interpreted and applied in Canada."))
+    luaunit.authorAssertEquals(marcr.author(), "Kindred, Hugh M.")
+    luaunit.callnumberAssertEquals(marcr.callnumber(), "KZ358.A2 I58 2006 SUP.")
+    luaunit.editionAssertEquals(marcr.edition(), "7th ed.")
+    luaunit.assertEquals(marcr.pages(), "156")
+    luaunit.assertEquals(marcr.year(), "2006")
+    luaunit.assertEquals(marcr.editor(), "")
 end
 
 os.exit(luaunit.LuaUnit.run())

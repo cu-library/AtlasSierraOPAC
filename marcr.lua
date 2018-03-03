@@ -11,7 +11,7 @@ end
 
 -- Flip a name from First Last to Last, First
 local function flipName(name)
-	return(name:gsub("^(.-) ([^ ]*)$", "%2, %1"))
+	return(name:gsub("^(.-) ([^%s]*) ?$", "%2, %1"))
 end
 
 -- Remove any subfield markers. If that leaves double spaces, remove those as well.
@@ -56,8 +56,9 @@ function marcr.title()
 			title = title .. "."
 		end
 		title = title:gsub("&amp;", "&")
-		title = title:gsub("not-for- profit", "not-for-profit")
-		title = title:gsub("not- for-profit", "not-for-profit")
+		title = title:gsub(" %.$", ".")
+		title = title:gsub("not%-for%- profit", "not-for-profit")
+		title = title:gsub("not%- for%-profit", "not-for-profit")
 		title = removeSubFieldMarkers(title)
 	end
 	return title
@@ -80,11 +81,22 @@ function marcr.author()
 
 	-- We couldn't find an author in the 100 field. Fall back to title. 
 	if (author == "" and marcr["m"]["245"] ~= nil) then
-		if marcr["m"]["245"][1]:find("%|cedited by") == nil then
-	
-			author = marcr["m"]["245"][1]:match("^.*%|c(.-) %.%.%. %[et al%.%]%.")
+		if marcr["m"]["245"][1]:find("%|c%[?edited by") == nil then
+
+			author = marcr["m"]["245"][1]:match("^.*%|c.- %; (.-) %.%.%. %[et al%.%]%.")
 			if author ~= nil then
 				author = flipName(author)
+			end
+
+			if author == nil then
+				author = marcr["m"]["245"][1]:match("^.*%|c(.-) %.%.%. %[et al%.%]%.")
+				if author ~= nil then
+					author = flipName(author)
+				end
+			end
+
+			if author == nil then
+				author = marcr["m"]["245"][1]:match("^.*%|c(Modern Language, Association of America%.)$")
 			end
 
 			if author == nil then
@@ -102,6 +114,7 @@ function marcr.author()
 				author = ""
 			else
 				author = author:gsub("&amp;", "&")
+				author = author:gsub("([^%.])$", "%1.")
 			end
 		end
 	end
@@ -188,27 +201,27 @@ end
 function marcr.editor()
 	local editor = ""
 	if marcr["m"]["245"] ~= nil then
-		editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited by ([^,;]*) and .*$")
+		editor = marcr["m"]["245"][1]:match("^.-|c.-%[?[eE]dited by%]? ([^,;(]*) and .*$")
 		if editor == nil then
-			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited by ([^,;]*) &amp; .*%.$")
+			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited by%]? ([^,;(]*) &amp; .*%.$")
 		end
 		if editor == nil then
-			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited by ([^,;]*).*%.$")
+			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited by%]? ([^,;(]*).*%.$")
 		end
 		if editor == nil then
-			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited and introduced by ([^,;]*).*%.$")
+			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited and introduced by ([^,;(]*).*%.$")
 		end
 		if editor == nil then
-			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited and with an introduction by ([^,;]*).*%.$")
+			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited and with an introduction by ([^,;(]*).*%.$")
 		end
 		if editor == nil then
-			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited and with introductions by ([^,;]*).*%.$")
+			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited and with introductions by ([^,;(]*).*%.$")
 		end
 		if editor == nil then
-			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited with introductions by ([^,;]*).*%.$")
+			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited with introductions by ([^,;(]*).*%.$")
 		end
 		if editor == nil then
-			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited and transcribed by ([^,;]*).*%.$")
+			editor = marcr["m"]["245"][1]:match("^.-|c.-[eE]dited and transcribed by ([^,;(]*).*%.$")
 		end
 		if editor == nil then
 			editor = ""
